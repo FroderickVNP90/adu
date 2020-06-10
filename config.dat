@@ -1,0 +1,8 @@
+credential_delegation:valerii.perepelytsia@varus.ua
+domen:varus.ua
+back_up_account:disk.storage@varus.ua
+ldap_server:172.20.1.128
+ldap_user:cn=test,ou=Users,ou=Office,dc=htc,dc=corp
+ldap_password:Gigabyte-0987
+mail_to:user.test@varus.ua
+dc_ou:ou=Users,ou=Office,dc=htc,dc=corp
