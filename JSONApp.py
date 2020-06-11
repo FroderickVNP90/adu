@@ -43,14 +43,29 @@ if __name__ == '__main__':
     except Exception as Error:
         logging.error(Error)
     else:
-        try:
+        '''try:
             groups = service.groups().list(customer='my_customer').execute()
         except Exception as Error:
             logging.error(Error)
         else:
             listOfGroups = list()
             for group in groups['groups']:
-                listOfGroups.append([group.get('name',''), group.get('email','')])
+                listOfGroups.append([group.get('name',''), group.get('email','')])'''
+                
+            groups = service.groups().list(customer='my_customer', \
+            maxResults=500).execute()
+            token = groups.get('nextPageToken', None)
+            for group in groups['groups']:
+                listOfGroups.append([group.get('name',''), \
+                group.get('email','')])
+
+            while token is not None:
+                groups = service.groups().list(customer='my_customer', \
+                pageToken=token, maxResults=500).execute()
+                for group in groups['groups']:
+                    listOfGroups.append([group.get('name',''), \
+                    group.get('email','')])
+                token = results.get('nextPageToken', None)
 
             operationStatus = str()
             jsonImportFile = dict()
@@ -106,7 +121,44 @@ if __name__ == '__main__':
                                     addUsersTemplates[no]["name"]["familyName"] + \
                                     " error while adding.")
                             logging.error(Error)
-
+                            
+                    for template in addGroupsTemplates:
+                        group_exist = False
+                        for group in listOfGroups:
+                            if group == template[0]:
+                                try:
+                                    service.members().insert(groupKey=template[0], body=template[1]).execute()
+                                    logging.info(template[1]["email"] + " successfully added to group " + template[0])
+                                except Exception as Error:
+                                    logging.error(Error)
+                                    logging.error(template[1]["email"] + " error while adding to group " + str(template[0]))
+                                group_exist = True
+                                break
+                            else:
+                                continue
+                                
+                        if group_exist == False:
+                            group_body = {
+                                "name": "{0}".format(template[0].split('.')[0]),
+                                "email": "{0}".format(template[0])
+                                    }
+                            service.groups().insert(body=group_body).execute()
+                            
+                            try:
+                                service.members().insert(groupKey=template[0], body=template[1]).execute()
+                                logging.info(template[1]["email"] + " successfully added to group " + template[0])
+                            except Exception as Error:
+                                logging.error(Error)
+                                logging.error(template[1]["email"] + " error while adding to group " + str(template[0]))
+                                
+                    try:
+                        service.members().insert(groupKey=template[0], body=template[1]).execute()
+                        logging.info(template[1]["email"] + " successfully added to group " + template[0])
+                    except Exception as Error:
+                        logging.error(Error)
+                        logging.error(template[1]["email"] + " error while adding to group " + str(template[0]))
+                                    
+                    '''
                     for item in addGroupsTemplates:
                         try:
                             service.members().insert(groupKey=item[0], body=item[1]).execute()
@@ -114,7 +166,8 @@ if __name__ == '__main__':
                         except Exception as Error:
                             logging.error(Error)
                             logging.error(item[1]["email"] + " error while adding to group " + str(item[0]))
-
+                    '''
+                    
                     remove(argument)
 
                 if operationStatus == "suspend":

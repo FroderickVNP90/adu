@@ -4,7 +4,7 @@
 import string
 import random
 from json import load
-from re import sub
+from re import sub, findall
 from os import path, getcwd
 from difflib import SequenceMatcher
 from password_generator import PasswordGenerator
@@ -152,6 +152,9 @@ class CreateJsonTemplates(object):
                     break
                 else:
                     pass
+                for item in item_data[4].split(' | '):
+                    if findall(r'^\(\w\s?\W\s?\d+\)', item) != []:
+                        item_data.append('va' + str(findall(r'\d+', item)[0]) + '.' + 'top' + "@" + self.__domen)
             if len(item_data) == 8:
                 item_data.append(None)
                     
