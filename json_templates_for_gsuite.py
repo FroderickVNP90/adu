@@ -151,10 +151,11 @@ class CreateJsonTemplates(object):
                     item_data.append(group[1])
                     break
                 else:
-                    pass
-                for item in item_data[4].split(' | '):
-                    if findall(r'^\(\w\s?\W\s?\d+\)', item) != []:
-                        item_data.append('va' + str(findall(r'\d+', item)[0]) + '.' + 'top' + "@" + self.__domen)
+                    for item in item_data[4].split(' | '):
+                        if findall(r'^\(\w\s?\W\s?\d+\)', item) != []:
+                            item_data.append('va' + str(findall(r'\d+', item)[0]) + '.' + 'top' + "@" + self.__domen)
+                        else:
+                            pass
             if len(item_data) == 8:
                 item_data.append(None)
                     
