@@ -74,7 +74,7 @@ if __name__ == '__main__':
             with open(argument, "r", encoding='utf-8' ) as openedJsonFile:
                 jsonImportFile = load(openedJsonFile)
                 operationStatus = jsonImportFile["operation"]
-                    
+                
             if operationStatus == "add":
 
                 if not path.exists(path.join(getcwd(), 'Export')):
@@ -87,11 +87,11 @@ if __name__ == '__main__':
                         pass
 
                 addUsersTemplates = CreateJsonTemplates(argument, \
-                        listOfGroups, ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('addUsers')
+                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('addUsers')
                 addGroupsTemplates = CreateJsonTemplates(argument, \
-                        listOfGroups, ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('addGroups')
+                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('addGroups')
                 ldapUsersTemplates = CreateJsonTemplates(argument, \
-                        listOfGroups, ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('ldap')
+                        listOfGroups, 'conditional_groups.dat', ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('ldap')
                 service_ldap.add(ldapUsersTemplates)
 
                 for no in range(len(addUsersTemplates)):
@@ -115,65 +115,51 @@ if __name__ == '__main__':
                         logging.error(Error)
                         
                 for template in addGroupsTemplates:
-                    group_exist = False
-                    for group in listOfGroups:
-                        if group == template[0]:
+                    for item_group in template[0]:
+                        group_exist = False
+                        for group in listOfGroups:
+                            if group[1] == item_group:
+                                try:
+                                    service.members().insert(groupKey=item_group, body=template[1]).execute()
+                                    logging.info(template[1]["email"] + " successfully added to group " + item_group)
+                                except Exception as Error:
+                                    logging.error(Error)
+                                    logging.error(template[1]["email"] + " error while adding to group " + str(item_group))
+                                group_exist = True
+                                break
+                            else:
+                                continue
+        
+                        if group_exist == False:
+                            group_body = {
+                                "name": "{0}".format(item_group.split('@')[0]),
+                                "email": "{0}".format(item_group)
+                                    }
                             try:
-                                service.members().insert(groupKey=template[0], body=template[1]).execute()
-                                logging.info(template[1]["email"] + " successfully added to group " + template[0])
+                                service.groups().insert(body=group_body).execute()
+                                logging.info("successfully create group " + item_group.split('@')[0])
                             except Exception as Error:
                                 logging.error(Error)
-                                logging.error(template[1]["email"] + " error while adding to group " + str(template[0]))
-                            group_exist = True
-                            break
-                        else:
-                            continue
-                            
-                    if group_exist == False:
-                        group_body = {
-                            "name": "{0}".format(template[0].split('.')[0]),
-                            "email": "{0}".format(template[0])
-                                }
-                        try:
-                            service.groups().insert(body=group_body).execute()
-                            logging.info(template[1]["email"] + " successfully create group " + template[0].split('.')[0])
-                        except Exception as Error:
-                            logging.error(Error)
-                            logging.error(template[1]["email"] + " error while creating group " + str(template[0].split('.')[0]))
-                            
-                        
-                        try:
-                            service.members().insert(groupKey=template[0], body=template[1]).execute()
-                            logging.info(template[1]["email"] + " successfully added to group " + template[0])
-                        except Exception as Error:
-                            logging.error(Error)
-                            logging.error(template[1]["email"] + " error while adding to group " + str(template[0]))
-                            
-                try:
-                    service.members().insert(groupKey=template[0], body=template[1]).execute()
-                    logging.info(template[1]["email"] + " successfully added to group " + template[0])
-                except Exception as Error:
-                    logging.error(Error)
-                    logging.error(template[1]["email"] + " error while adding to group " + str(template[0]))
+                                logging.error("error while creating group " + str(item_group.split('@')[0]))
+                            else:
+                                try:
+                                    service.members().insert(groupKey=item_group, body=template[1]).execute()
+                                    logging.info(template[1]["email"] + " successfully added to group " + item_group)
+                                except Exception as Error:
+                                    logging.error(Error)
+                                    logging.error(template[1]["email"] + " error while adding to group " + str(item_group))
                                 
-                '''
-                for item in addGroupsTemplates:
-                    try:
-                        service.members().insert(groupKey=item[0], body=item[1]).execute()
-                        logging.info(item[1]["email"] + " successfully added to group " + item[0])
-                    except Exception as Error:
-                        logging.error(Error)
-                        logging.error(item[1]["email"] + " error while adding to group " + str(item[0]))
-                '''
-                
+                        else:
+                            pass
+                                
                 remove(argument)
 
             if operationStatus == "suspend":
 
                 suspendUsersTemplates = CreateJsonTemplates(argument, \
-                        listOfGroups, ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('suspendUsers')
+                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('suspendUsers')
                 ldapUsersTemplates = CreateJsonTemplates(argument, \
-                        listOfGroups, ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('ldap')
+                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('ldap')
                 service_ldap.suspend(ldapUsersTemplates)
 
                 for item in suspendUsersTemplates:
@@ -274,11 +260,11 @@ if __name__ == '__main__':
             if operationStatus == "update":
 
                 updateUsersTemplates = CreateJsonTemplates(argument, \
-                        listOfGroups, ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('updateUsers')
+                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('updateUsers')
                 updateGroupsTemplates = CreateJsonTemplates(argument, \
-                        listOfGroups, ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('addGroups')
+                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('addGroups')
                 ldapUsersTemplates = CreateJsonTemplates(argument, \
-                        listOfGroups, ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('ldap')
+                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('ldap')
                 service_ldap.update(ldapUsersTemplates)
 
                 for item in updateUsersTemplates:
@@ -288,13 +274,43 @@ if __name__ == '__main__':
                     except Exception as Error:
                         logging.error(item[0] + " update error")
                         logging.error(Error)
-
-                for item in updateGroupsTemplates:
-                    try:
-                        service.members().insert(groupKey=item[0], body=item[1]).execute()
-                        logging.info(item[1]["email"] + " successfully added to group " + item[0])
-                    except Exception as Error:
-                        logging.error(item[1]["email"] + " error while adding to group " + str(item[0]))
-                        logging.error(Error)
+                        
+                for template in updateGroupsTemplates:
+                    for item_group in template[0]:
+                        group_exist = False
+                        for group in listOfGroups:
+                            if group[1] == item_group:
+                                try:
+                                    service.members().insert(groupKey=item_group, body=template[1]).execute()
+                                    logging.info(template[1]["email"] + " successfully added to group " + item_group)
+                                except Exception as Error:
+                                    logging.error(Error)
+                                    logging.error(template[1]["email"] + " error while adding to group " + str(item_group))
+                                group_exist = True
+                                break
+                            else:
+                                continue
+        
+                        if group_exist == False:
+                            group_body = {
+                                "name": "{0}".format(item_group.split('@')[0]),
+                                "email": "{0}".format(item_group)
+                                    }
+                            try:
+                                service.groups().insert(body=group_body).execute()
+                                logging.info("successfully create group " + item_group.split('@')[0])
+                            except Exception as Error:
+                                logging.error(Error)
+                                logging.error("error while creating group " + str(item_group.split('@')[0]))
+                            else:
+                                try:
+                                    service.members().insert(groupKey=item_group, body=template[1]).execute()
+                                    logging.info(template[1]["email"] + " successfully added to group " + item_group)
+                                except Exception as Error:
+                                    logging.error(Error)
+                                    logging.error(template[1]["email"] + " error while adding to group " + str(item_group))
+                                
+                        else:
+                            pass
 
                 remove(argument)

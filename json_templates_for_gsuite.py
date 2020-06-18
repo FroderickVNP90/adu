@@ -12,15 +12,17 @@ from Validator import EmailValidator
 
 class CreateJsonTemplates(object):
     """Class creates templates for passing to GOOGLE API"""
-    def __init__(self, argv, groups,domen,dc_ou):
+    def __init__(self, argv, groups, cond_groups, domen, dc_ou):
         self.__domen = domen
         self.__dc_ou = dc_ou
         self.__email_validator = EmailValidator()
         self.__json_file = argv
         self.__groups = groups
+        self.__cond_groups = cond_groups
         self.__pg = PasswordGenerator()
         self.__chars = 'abcdefghijklnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
         self.__data = list()
+        self.__list_cond_groups = list()
         self.__parsed_names_list = list()
         self.__transliteration_names_list = list()
         self.__email_adresses_list = list()
@@ -44,6 +46,13 @@ class CreateJsonTemplates(object):
                 self.__json_temp["email"][index_num], \
                 self.__json_temp["inn"][index_num], \
                 self.__json_temp["phone"][index_num]])
+                
+        with open(self.__cond_groups, "r", encoding='utf-8') as cond_groups:
+            temp_list_cond_groups = list()
+            for line in cond_groups:
+                temp_list_cond_groups.append(("".join(line.split(";"))).replace('\n',''))
+            for line in temp_list_cond_groups:
+                self.__list_cond_groups.append([line.split(":")[0], line.split(":")[1].split(",")])
 
         self.__parse_names()
         self.__names_transliteration()
@@ -148,17 +157,28 @@ class CreateJsonTemplates(object):
         for index_num, item_data in enumerate(self.__consolidated_list):
             for group in self.__groups:
                 if group[0] in item_data[4].split(' | '):
-                    item_data.append(group[1])
+                    item_data.append([group[1]])
                     break
                 else:
-                    for item in item_data[4].split(' | '):
-                        if findall(r'^\(\w\s?\W\s?\d+\)', item) != []:
-                            item_data.append('va' + str(findall(r'\d+', item)[0]) + '.' + 'top' + "@" + self.__domen)
-                        else:
-                            pass
+                    pass
+            
+            for item in item_data[4].split(' | '):
+                if findall(r'^\(\w\s?\W\s?\d+\)', item) != []:
+                    item_data.append(['va' + str(findall(r'\d+', item)[0]) + '.' + 'top' + "@" + self.__domen])
+                else:
+                    pass
+            
             if len(item_data) == 8:
-                item_data.append(None)
-                    
+                item_data.append([None])
+                
+            for group in self.__list_cond_groups:
+                for condition in group[1]:
+                    if condition in item_data[4].split(' | ') or condition == 'default':
+                        item_data[8].append(group[0])
+                        break
+                    else:
+                        pass
+                        
         for index_num, item_data in enumerate(self.__consolidated_list):
             item_data.append(self.__parsed_names_list[index_num][2])
 
