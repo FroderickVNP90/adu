@@ -291,7 +291,7 @@ if __name__ == '__main__':
                             else:
                                 continue
         
-                        if group_exist == False:
+                        if group_exist == False and item_group is not None:
                             group_body = {
                                 "name": "{0}".format(item_group.split('@')[0]),
                                 "email": "{0}".format(item_group)
