@@ -91,7 +91,7 @@ if __name__ == '__main__':
                 addGroupsTemplates = CreateJsonTemplates(argument, \
                         listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('addGroups')
                 ldapUsersTemplates = CreateJsonTemplates(argument, \
-                        listOfGroups, 'conditional_groups.dat', ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('ldap')
+                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('ldap')
                 service_ldap.add(ldapUsersTemplates)
 
                 for no in range(len(addUsersTemplates)):

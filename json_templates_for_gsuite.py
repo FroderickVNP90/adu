@@ -155,16 +155,10 @@ class CreateJsonTemplates(object):
             item_data[7]])
             
         for index_num, item_data in enumerate(self.__consolidated_list):
-            for group in self.__groups:
-                if group[0] in item_data[4].split(' | '):
-                    item_data.append([group[1]])
-                    break
-                else:
-                    pass
-            
             for item in item_data[4].split(' | '):
                 if findall(r'^\(\w\s?\W\s?\d+\)', item) != []:
                     item_data.append(['va' + str(findall(r'\d+', item)[0]) + '.' + 'top' + "@" + self.__domen])
+                    break
                 else:
                     pass
             
@@ -173,7 +167,9 @@ class CreateJsonTemplates(object):
                 
             for group in self.__list_cond_groups:
                 for condition in group[1]:
-                    if condition in item_data[4].split(' | ') or condition == 'default':
+                    if condition in item_data[4].split(' | ') \
+                    or condition == 'default' \
+                    or condition == item_data[3]:
                         item_data[8].append(group[0])
                         break
                     else:
@@ -290,6 +286,7 @@ class CreateJsonTemplates(object):
             
         elif mode == 'ldap':
             for index_num, item_data in enumerate(self.__consolidated_list):
+                print([item_data[1],item_data[0],item_data[9]])
                 self.__list_templates_for_ldap.append(\
                 [('cn={0},{1}' + self.__dc_ou).format(\
                 (item_data[1] + " " + item_data[0] + " " + item_data[9]).rstrip(), \
