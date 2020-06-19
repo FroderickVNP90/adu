@@ -286,7 +286,6 @@ class CreateJsonTemplates(object):
             
         elif mode == 'ldap':
             for index_num, item_data in enumerate(self.__consolidated_list):
-                print([item_data[1],item_data[0],item_data[9]])
                 self.__list_templates_for_ldap.append(\
                 [('cn={0},{1}' + self.__dc_ou).format(\
                 (item_data[1] + " " + item_data[0] + " " + item_data[9]).rstrip(), \
