@@ -195,6 +195,7 @@ class CreateJsonTemplates(object):
                             pass
                     if findall(condition, item_data[3]) != []:
                         item_data[8].append(group[0])
+                        break
                     else:
                         pass
                         
