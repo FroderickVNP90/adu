@@ -87,11 +87,11 @@ if __name__ == '__main__':
                         pass
 
                 addUsersTemplates = CreateJsonTemplates(argument, \
-                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('addUsers')
+                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['dyn_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('addUsers')
                 addGroupsTemplates = CreateJsonTemplates(argument, \
-                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('addGroups')
+                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['dyn_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('addGroups')
                 ldapUsersTemplates = CreateJsonTemplates(argument, \
-                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('ldap')
+                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['dyn_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('ldap')
                 service_ldap.add(ldapUsersTemplates)
 
                 for no in range(len(addUsersTemplates)):
@@ -157,9 +157,9 @@ if __name__ == '__main__':
             if operationStatus == "suspend":
 
                 suspendUsersTemplates = CreateJsonTemplates(argument, \
-                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('suspendUsers')
+                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['dyn_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('suspendUsers')
                 ldapUsersTemplates = CreateJsonTemplates(argument, \
-                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('ldap')
+                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['dyn_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('ldap')
                 service_ldap.suspend(ldapUsersTemplates)
 
                 for item in suspendUsersTemplates:
@@ -260,11 +260,11 @@ if __name__ == '__main__':
             if operationStatus == "update":
 
                 updateUsersTemplates = CreateJsonTemplates(argument, \
-                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('updateUsers')
+                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['dyn_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('updateUsers')
                 updateGroupsTemplates = CreateJsonTemplates(argument, \
-                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('addGroups')
+                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['dyn_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('addGroups')
                 ldapUsersTemplates = CreateJsonTemplates(argument, \
-                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('ldap')
+                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['dyn_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('ldap')
                 service_ldap.update(ldapUsersTemplates)
 
                 for item in updateUsersTemplates:
