@@ -4,7 +4,7 @@
 import string
 import random
 from json import load
-from re import sub, findall
+from re import sub, findall, escape
 from os import path, getcwd
 from difflib import SequenceMatcher
 from password_generator import PasswordGenerator
@@ -12,17 +12,19 @@ from Validator import EmailValidator
 
 class CreateJsonTemplates(object):
     """Class creates templates for passing to GOOGLE API"""
-    def __init__(self, argv, groups, cond_groups, domen, dc_ou):
+    def __init__(self, argv, groups, cond_groups, dyn_groups, domen, dc_ou):
         self.__domen = domen
         self.__dc_ou = dc_ou
         self.__email_validator = EmailValidator()
         self.__json_file = argv
         self.__groups = groups
         self.__cond_groups = cond_groups
+        self.__dyn_groups = dyn_groups
         self.__pg = PasswordGenerator()
         self.__chars = 'abcdefghijklnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
         self.__data = list()
         self.__list_cond_groups = list()
+        self.__list_dyn_groups = list()
         self.__parsed_names_list = list()
         self.__transliteration_names_list = list()
         self.__email_adresses_list = list()
@@ -52,7 +54,16 @@ class CreateJsonTemplates(object):
             for line in cond_groups:
                 temp_list_cond_groups.append(("".join(line.split(";"))).replace('\n',''))
             for line in temp_list_cond_groups:
-                self.__list_cond_groups.append([line.split(":")[0], line.split(":")[1].split(",")])
+                self.__list_cond_groups.append([line.split(":")[0], \
+                [sub(r'(^r\')|(\'$)', '', x) for x in line.split(":")[1].split(" , ")]])
+                
+        with open(self.__dyn_groups, "r", encoding='utf-8') as dyn_groups:
+            temp_list_dyn_groups = list()
+            for line in dyn_groups:
+                temp_list_dyn_groups.append(("".join(line.split(";"))).replace('\n',''))
+            for line in temp_list_dyn_groups:
+                self.__list_dyn_groups.append([line.split(' , ')[:3], \
+                str(line.split(' , ')[3]).split(' : ')])
 
         self.__parse_names()
         self.__names_transliteration()
@@ -154,26 +165,45 @@ class CreateJsonTemplates(object):
             item_data[6], \
             item_data[7]])
             
-        for index_num, item_data in enumerate(self.__consolidated_list):
-            for item in item_data[4].split(' | '):
-                if findall(r'^\(\w\s?\W\s?\d+\)', item) != []:
-                    item_data.append(['va' + str(findall(r'\d+', item)[0]) + '.' + 'top' + "@" + self.__domen])
-                    break
-                else:
-                    pass
-            
+        #Определение пользователей в группы
+        for index_num, item_data in enumerate(self.__consolidated_list):                    
             if len(item_data) == 8:
-                item_data.append([None])
+                item_data.append([])
+                
+            for group in self.__list_dyn_groups:
+                for item in item_data[4].split(' | '):
+                    for condition in group[1]:
+                        if findall(condition, item) != [] and group[0][0] == 'sub':
+                            item_data[8].append(sub(r'\{\d\}', \
+                            findall(group[0][2], item)[0], condition))
+                        elif findall(sub(r'(^r\')|(\'$)', '', condition), item_data[3]) != [] \
+                        and findall(r'^\(\w\s?\W\s?\d+\)', item) != [] \
+                        and group[0][0] == 'sub':
+                            item_data[8].append(sub(r'\{\d\}', \
+                            findall(sub(r'(^r\')|(\'$)', '', \
+                            group[0][2]), item)[0], group[0][1]))
+                        else:
+                            pass
                 
             for group in self.__list_cond_groups:
                 for condition in group[1]:
-                    if condition in item_data[4].split(' | ') \
-                    or condition == 'default' \
-                    or condition == item_data[3]:
+                    for item in item_data[4].split(' | '):
+                        if findall(condition, item) != []:
+                            item_data[8].append(group[0])
+                            break
+                        else:
+                            pass
+                    if findall(condition, item_data[3]) != []:
+                        item_data[8].append(group[0])
+                    else:
+                        pass
+                        
+                    if condition == 'default':
                         item_data[8].append(group[0])
                         break
                     else:
                         pass
+                            
                         
         for index_num, item_data in enumerate(self.__consolidated_list):
             item_data.append(self.__parsed_names_list[index_num][2])
