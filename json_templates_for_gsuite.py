@@ -318,10 +318,10 @@ class CreateJsonTemplates(object):
         elif mode == 'ldap':
             for index_num, item_data in enumerate(self.__consolidated_list):
                 self.__list_templates_for_ldap.append(\
-                [('cn={0},{1}' + self.__dc_ou).format(\
+                [('cn={0},{1}').format(\
                 (item_data[1] + " " + item_data[0] + " " + item_data[9]).rstrip(), \
-                "".join(["ou="+str(x)+"," for x in item_data[11].split(" | ")]) \
-                if item_data[11] != "" else "ou=Заблоковані,"), \
+                "".join(["ou="+str(x)+"," for x in item_data[11].split(" | ")]) + self.__dc_ou \
+                if item_data[11] != "" else "ou=Заблоковані," + ",".join(self.__dc_ou.split(',')[1:])), \
                 'user',
                 {'givenName': "{0}".format(item_data[0]),\
                 'sn': "{0}".format(item_data[1]), \
