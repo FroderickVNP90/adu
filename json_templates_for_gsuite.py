@@ -236,7 +236,7 @@ class CreateJsonTemplates(object):
         for index_num,item_data in enumerate(self.__consolidated_list):
             for line in self.__ad_folders:
                 if len(line.split(" | ")) == 3:
-                    if SequenceMatcher(None, line, item_data[4]).ratio() > 0.90:
+                    if SequenceMatcher(None, line, item_data[4]).ratio() > 0.95:
                         reverse_line = line.split(" | ")
                         reverse_line.reverse()
                         reverse_line = " | ".join(reverse_line)
@@ -245,7 +245,7 @@ class CreateJsonTemplates(object):
                     else:
                         pass
                 else:
-                    if SequenceMatcher(None, " | ".join(line.split(" | ")[-3:]), item_data[4]).ratio() > 0.90:
+                    if SequenceMatcher(None, " | ".join(line.split(" | ")[-3:]), item_data[4]).ratio() > 0.95:
                         reverse_line = line.split(" | ")
                         reverse_line.reverse()
                         reverse_line = " | ".join(reverse_line)
@@ -320,7 +320,7 @@ class CreateJsonTemplates(object):
                 self.__list_templates_for_ldap.append(\
                 [('cn={0},{1}').format(\
                 (item_data[1] + " " + item_data[0] + " " + item_data[9]).rstrip(), \
-                "".join(["ou="+str(x)+"," for x in item_data[11].split(" | ")]) + self.__dc_ou \
+                "".join(["ou="+str(x).replace(",", "\,")+"," for x in item_data[11].split(" | ")]) + self.__dc_ou \
                 if item_data[11] != "" else "ou=Заблоковані," + ",".join(self.__dc_ou.split(',')[1:])), \
                 'user',
                 {'givenName': "{0}".format(item_data[0]),\

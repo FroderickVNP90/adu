@@ -93,6 +93,16 @@ if __name__ == '__main__':
                 ldapUsersTemplates = CreateJsonTemplates(argument, \
                         listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['dyn_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('ldap')
                 service_ldap.add(ldapUsersTemplates)
+                
+                incomers_list = list()
+                
+                for num, data in enumerate(addUsersTemplates):
+                    try:
+                        service.users().get(userKey=data['primaryEmail']).execute()
+                    except Exception as Error:
+                        incomers_list.append(data['primaryEmail'])
+                    else:
+                        pass
 
                 for no in range(len(addUsersTemplates)):
                     try:
@@ -113,6 +123,20 @@ if __name__ == '__main__':
                                 addUsersTemplates[no]["name"]["familyName"] + \
                                 " error while adding.")
                         logging.error(Error)
+                        
+                greetings = '''
+                Дорогой друг, рады приветствовать тебя в команде VARUS.
+                Ознакомься с презентацией, которая добавлена в письмо!
+                Создавай свою историю с VARUS
+                '''
+                if len(incomers_list) > 0:
+                    for incomer in incomers_list:
+                        VarusGreetings().send_message("me", \
+                        ADUConfigs['greetings_sender'], incomer, \
+                        'Добро пожаловать в VARUS', \
+                        greetings, ADUConfigs['greetings_attachment'])
+                else:
+                    pass
                         
                 for template in addGroupsTemplates:
                     for item_group in template[0]:
