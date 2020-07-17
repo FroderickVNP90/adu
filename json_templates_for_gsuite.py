@@ -320,7 +320,7 @@ class CreateJsonTemplates(object):
                 self.__list_templates_for_ldap.append(\
                 [('cn={0},{1}').format(\
                 (item_data[1] + " " + item_data[0] + " " + item_data[9]).rstrip(), \
-                "".join(["ou="+str(x).replace(",", "\,")+"," for x in item_data[11].split(" | ")]) + self.__dc_ou \
+                "".join(["ou="+str(x).replace(",", "\5C,")+"," for x in item_data[11].split(" | ")]) + self.__dc_ou \
                 if item_data[11] != "" else "ou=Заблоковані," + ",".join(self.__dc_ou.split(',')[1:])), \
                 'user',
                 {'givenName': "{0}".format(item_data[0]),\
