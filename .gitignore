@@ -1,0 +1,6 @@
+~/stable/adu/Cert/
+~/stable/adu/__pycache__
+*.pyc
+*.json
+test_*
+

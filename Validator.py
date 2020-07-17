@@ -41,3 +41,7 @@ class EmailValidator:
 class LDAPValidator:
     def __init__(self):
         pass
+
+class AccountExistens:
+    def __init__(self):
+        pass

@@ -8,6 +8,7 @@ from json_templates_for_gsuite import CreateJsonTemplates
 from ADUService import create_directory_service
 from LDAPOperations import ADOperation
 from global_vars import ADUConfigs
+from varus_greetings import VarusGreetings
 
 if __name__ == '__main__':
     if not path.exists(path.join(getcwd(), 'Logs')):
@@ -43,207 +44,298 @@ if __name__ == '__main__':
     except Exception as Error:
         logging.error(Error)
     else:
-        try:
-            groups = service.groups().list(customer='my_customer').execute()
-        except Exception as Error:
-            logging.error(Error)
-        else:
-            listOfGroups = list()
+        listOfGroups = list()
+        groups = service.groups().list(customer='my_customer', \
+        maxResults=500).execute()
+        token = groups.get('nextPageToken', None)
+        for group in groups['groups']:
+            listOfGroups.append([group.get('name',''), \
+            group.get('email','')])
+
+        while token is not None:
+            groups = service.groups().list(customer='my_customer', \
+            pageToken=token, maxResults=500).execute()
             for group in groups['groups']:
-                listOfGroups.append([group.get('name',''), group.get('email','')])
+                listOfGroups.append([group.get('name',''), \
+                group.get('email','')])
+            token = results.get('nextPageToken', None)
 
-            operationStatus = str()
-            jsonImportFile = dict()
+        operationStatus = str()
+        jsonImportFile = dict()
 
-            if len(fnmatch.filter(listdir(path.join(getcwd())), '*.json')) > 0:
-                if not path.exists(path.join(getcwd(), 'Back_up', 'back_up_' + strftime('%d.%m.%Y'))):
-                    makedirs(path.join(getcwd(), 'Back_up', 'back_up_' + strftime('%d.%m.%Y')))
-                for path_to_json in fnmatch.filter(listdir(path.join(getcwd())), '*.json'):
-                    copy(path_to_json, path.join(getcwd(), 'Back_up', 'back_up_' + strftime('%d.%m.%Y')))
-            else:
-                pass
+        if len(fnmatch.filter(listdir(path.join(getcwd())), '*.json')) > 0:
+            if not path.exists(path.join(getcwd(), 'Back_up', 'back_up_' + strftime('%d.%m.%Y'))):
+                makedirs(path.join(getcwd(), 'Back_up', 'back_up_' + strftime('%d.%m.%Y')))
+            for path_to_json in fnmatch.filter(listdir(path.join(getcwd())), '*.json'):
+                copy(path_to_json, path.join(getcwd(), 'Back_up', 'back_up_' + strftime('%d.%m.%Y')))
+        else:
+            pass
 
-            for argument in fnmatch.filter(listdir(path.join(getcwd())), '*.json'):
-                with open(argument, "r", encoding='utf-8' ) as openedJsonFile:
-                    jsonImportFile = load(openedJsonFile)
-                    operationStatus = jsonImportFile["operation"]
-                        
-                if operationStatus == "add":
+        for argument in fnmatch.filter(listdir(path.join(getcwd())), '*.json'):
+            with open(argument, "r", encoding='utf-8' ) as openedJsonFile:
+                jsonImportFile = load(openedJsonFile)
+                operationStatus = jsonImportFile["operation"]
+                
+            if operationStatus == "add":
 
-                    if not path.exists(path.join(getcwd(), 'Export')):
-                        makedirs(path.join(getcwd(), 'Export'))
+                if not path.exists(path.join(getcwd(), 'Export')):
+                    makedirs(path.join(getcwd(), 'Export'))
+                else:
+                    if len(listdir(path.join(getcwd(), 'Export'))) > 0:
+                        for file_in_dir in listdir(path.join(getcwd(), 'Export')):
+                            remove(path.join(getcwd(), 'Export', file_in_dir))
                     else:
-                        if len(listdir(path.join(getcwd(), 'Export'))) > 0:
-                            for file_in_dir in listdir(path.join(getcwd(), 'Export')):
-                                remove(path.join(getcwd(), 'Export', file_in_dir))
+                        pass
+
+                addUsersTemplates = CreateJsonTemplates(argument, \
+                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['dyn_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('addUsers')
+                addGroupsTemplates = CreateJsonTemplates(argument, \
+                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['dyn_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('addGroups')
+                ldapUsersTemplates = CreateJsonTemplates(argument, \
+                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['dyn_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('ldap')
+                service_ldap.add(ldapUsersTemplates)
+                
+                incomers_list = list()
+                
+                for num, data in enumerate(addUsersTemplates):
+                    try:
+                        service.users().get(userKey=data['primaryEmail']).execute()
+                    except Exception as Error:
+                        incomers_list.append(data['primaryEmail'])
+                    else:
+                        pass
+
+                for no in range(len(addUsersTemplates)):
+                    try:
+                        service.users().insert(body=addUsersTemplates[no]).execute()
+                        logging.info(addUsersTemplates[no]["primaryEmail"] + " " + \
+                                addUsersTemplates[no]["name"]["givenName"] + " " + \
+                                addUsersTemplates[no]["name"]["familyName"] + \
+                                " successfully added.")
+                        with open(path.join(getcwd(), 'Export', "gsuit_email_" + \
+                                            str(no + 1) + ".json"), 'w') as jsonExportFile:
+                            dump({"email": addUsersTemplates[no]["primaryEmail"], \
+                            "index": "{0}".format(no+1), \
+                            "password": addUsersTemplates[no]["password"], \
+                            "ldap_password": ldapUsersTemplates[no][4],}, jsonExportFile)
+                    except Exception as Error:
+                        logging.error(addUsersTemplates[no]["primaryEmail"] + " " + \
+                                addUsersTemplates[no]["name"]["givenName"] + " " + \
+                                addUsersTemplates[no]["name"]["familyName"] + \
+                                " error while adding.")
+                        logging.error(Error)
+                        
+                greetings = '''
+                Дорогой друг, рады приветствовать тебя в команде VARUS.
+                Ознакомься с презентацией, которая добавлена в письмо!
+                Создавай свою историю с VARUS
+                '''
+                if len(incomers_list) > 0:
+                    for incomer in incomers_list:
+                        VarusGreetings().send_message("me", \
+                        ADUConfigs['greetings_sender'], incomer, \
+                        'Добро пожаловать в VARUS', \
+                        greetings, ADUConfigs['greetings_attachment'])
+                else:
+                    pass
+                        
+                for template in addGroupsTemplates:
+                    for item_group in template[0]:
+                        group_exist = False
+                        for group in listOfGroups:
+                            if group[1] == item_group:
+                                try:
+                                    service.members().insert(groupKey=item_group, body=template[1]).execute()
+                                    logging.info(template[1]["email"] + " successfully added to group " + item_group)
+                                except Exception as Error:
+                                    logging.error(Error)
+                                    logging.error(template[1]["email"] + " error while adding to group " + str(item_group))
+                                group_exist = True
+                                break
+                            else:
+                                continue
+        
+                        if group_exist == False and item_group is not None:
+                            group_body = {
+                                "name": "{0}".format(item_group.split('@')[0]),
+                                "email": "{0}".format(item_group)
+                                    }
+                            try:
+                                service.groups().insert(body=group_body).execute()
+                                logging.info("successfully create group " + item_group.split('@')[0])
+                            except Exception as Error:
+                                logging.error(Error)
+                                logging.error("error while creating group " + str(item_group.split('@')[0]))
+                            else:
+                                try:
+                                    service.members().insert(groupKey=item_group, body=template[1]).execute()
+                                    logging.info(template[1]["email"] + " successfully added to group " + item_group)
+                                except Exception as Error:
+                                    logging.error(Error)
+                                    logging.error(template[1]["email"] + " error while adding to group " + str(item_group))
+                                
                         else:
                             pass
+                                
+                remove(argument)
 
-                    addUsersTemplates = CreateJsonTemplates(argument, \
-                            listOfGroups, ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('addUsers')
-                    addGroupsTemplates = CreateJsonTemplates(argument, \
-                            listOfGroups, ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('addGroups')
-                    ldapUsersTemplates = CreateJsonTemplates(argument, \
-                            listOfGroups, ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('ldap')
-                    service_ldap.add(ldapUsersTemplates)
+            if operationStatus == "suspend":
 
-                    for no in range(len(addUsersTemplates)):
-                        try:
-                            service.users().insert(body=addUsersTemplates[no]).execute()
-                            logging.info(addUsersTemplates[no]["primaryEmail"] + " " + \
-                                    addUsersTemplates[no]["name"]["givenName"] + " " + \
-                                    addUsersTemplates[no]["name"]["familyName"] + \
-                                    " successfully added.")
-                            with open(path.join(getcwd(), 'Export', "gsuit_email_" + \
-                                                str(no + 1) + ".json"), 'w') as jsonExportFile:
-                                dump({"email": addUsersTemplates[no]["primaryEmail"], \
-                                "index": "{0}".format(no+1), \
-                                "password": addUsersTemplates[no]["password"], \
-                                "ldap_password": ldapUsersTemplates[no][4],}, jsonExportFile)
-                        except Exception as Error:
-                            logging.error(addUsersTemplates[no]["primaryEmail"] + " " + \
-                                    addUsersTemplates[no]["name"]["givenName"] + " " + \
-                                    addUsersTemplates[no]["name"]["familyName"] + \
-                                    " error while adding.")
-                            logging.error(Error)
+                suspendUsersTemplates = CreateJsonTemplates(argument, \
+                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['dyn_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('suspendUsers')
+                ldapUsersTemplates = CreateJsonTemplates(argument, \
+                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['dyn_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('ldap')
+                service_ldap.suspend(ldapUsersTemplates)
 
-                    for item in addGroupsTemplates:
-                        try:
-                            service.members().insert(groupKey=item[0], body=item[1]).execute()
-                            logging.info(item[1]["email"] + " successfully added to group " + item[0])
-                        except Exception as Error:
-                            logging.error(Error)
-                            logging.error(item[1]["email"] + " error while adding to group " + str(item[0]))
+                for item in suspendUsersTemplates:
+                    try:
+                        service.users().update(userKey=item[0], body=item[1]).execute()
+                        logging.info(item[0] + " suspended")
+                    except Exception as Error:
+                        logging.error(item[0] + " suspend error")
+                        logging.error(Error)
 
-                    remove(argument)
+                remove(argument)
 
-                if operationStatus == "suspend":
+                disk_storage = service.users().get(userKey=ADUConfigs['back_up_account']).execute().get("id", None)
+                suspended_users_list = list()
+                results = service.users().list(customer="my_customer", \
+                maxResults=500).execute()
+                token = results.get('nextPageToken', None)
+                users_list = results.get("users", [])
+                for user in users_list:
+                    if user.get("suspended", []) == True:
+                        suspended_users_list.append(user)
+                    else:
+                        continue
 
-                    suspendUsersTemplates = CreateJsonTemplates(argument, \
-                            listOfGroups, ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('suspendUsers')
-                    ldapUsersTemplates = CreateJsonTemplates(argument, \
-                            listOfGroups, ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('ldap')
-                    service_ldap.suspend(ldapUsersTemplates)
-
-                    for item in suspendUsersTemplates:
-                        try:
-                            service.users().update(userKey=item[0], body=item[1]).execute()
-                            logging.info(item[0] + " suspended")
-                        except Exception as Error:
-                            logging.error(item[0] + " suspend error")
-                            logging.error(Error)
-
-                    remove(argument)
-
-                    disk_storage = service.users().get(userKey=ADUConfigs['back_up_account']).execute().get("id", None)
-                    suspended_users_list = list()
+                while token is not None:
                     results = service.users().list(customer="my_customer", \
-                    maxResults=500).execute()
-                    token = results.get('nextPageToken', None)
+                    pageToken=token, maxResults=500).execute()
                     users_list = results.get("users", [])
                     for user in users_list:
                         if user.get("suspended", []) == True:
                             suspended_users_list.append(user)
                         else:
                             continue
+                    token = results.get('nextPageToken', None)
 
-                    while token is not None:
-                        results = service.users().list(customer="my_customer", \
-                        pageToken=token, maxResults=500).execute()
-                        users_list = results.get("users", [])
-                        for user in users_list:
-                            if user.get("suspended", []) == True:
-                                suspended_users_list.append(user)
-                            else:
-                                continue
-                        token = results.get('nextPageToken', None)
+                target_list = list()
+                if len(suspended_users_list) > 0:
+                    for user in suspended_users_list:
+                        target_list.append([user["id"], user["name"]["fullName"]])
 
-                    target_list = list()
-                    if len(suspended_users_list) > 0:
-                        for user in suspended_users_list:
-                            target_list.append([user["id"], user["name"]["fullName"]])
+                complete_transfers_list = list()
+                users_to_delete = list()
+                transfers_query_result = service_transfer.transfers().list().execute()
+                data_transfers = transfers_query_result['dataTransfers']
+                for transfers in data_transfers:
+                    complete_transfers_list.append([transfers['oldOwnerUserId'], \
+                    transfers['applicationDataTransfers']])
 
-                    complete_transfers_list = list()
-                    users_to_delete = list()
-                    transfers_query_result = service_transfer.transfers().list().execute()
-                    data_transfers = transfers_query_result['dataTransfers']
-                    for transfers in data_transfers:
-                        complete_transfers_list.append([transfers['oldOwnerUserId'], \
-                        transfers['applicationDataTransfers']])
-
-                    for transfers in complete_transfers_list:
-                        if len(transfers[1]) > 1:
-                            for item in transfers[1]:
-                                if item['applicationId'] == '55656082996' and \
-                                item['applicationTransferStatus'] == 'completed':
-                                    users_to_delete.append(transfers[0])
-                                else:
-                                    pass
-                        else:
-                            if transfers[1][0]['applicationId'] == '55656082996' and \
-                            transfers[1][0]['applicationTransferStatus'] == 'completed':
+                for transfers in complete_transfers_list:
+                    if len(transfers[1]) > 1:
+                        for item in transfers[1]:
+                            if item['applicationId'] == '55656082996' and \
+                            item['applicationTransferStatus'] == 'completed':
                                 users_to_delete.append(transfers[0])
                             else:
                                 pass
+                    else:
+                        if transfers[1][0]['applicationId'] == '55656082996' and \
+                        transfers[1][0]['applicationTransferStatus'] == 'completed':
+                            users_to_delete.append(transfers[0])
+                        else:
+                            pass
 
-                    if len(target_list) > 0:
-                        for user in target_list:
-                            if user[0] not in users_to_delete:
-                                transfer_template = {
-                                "applicationDataTransfers": [ 
-                                    { 
-                                    "applicationTransferParams": [ 
-                                        {
-                                        "key": "PRIVACY_LEVEL", 
-                                        "value": ["shared", "private"],
-                                        },
-                                    ],
-                                    "applicationId": "55656082996", 
+                if len(target_list) > 0:
+                    for user in target_list:
+                        if user[0] not in users_to_delete:
+                            transfer_template = {
+                            "applicationDataTransfers": [ 
+                                { 
+                                "applicationTransferParams": [ 
+                                    {
+                                    "key": "PRIVACY_LEVEL", 
+                                    "value": ["shared", "private"],
                                     },
                                 ],
-                                "newOwnerUserId": "{0}".format(disk_storage), 
-                                "oldOwnerUserId": "{0}".format(user[0]), 
-                                }
+                                "applicationId": "55656082996", 
+                                },
+                            ],
+                            "newOwnerUserId": "{0}".format(disk_storage), 
+                            "oldOwnerUserId": "{0}".format(user[0]), 
+                            }
+                            try:
+                                service_transfer.transfers().insert(body=transfer_template).execute()
+                                logging.info(user[1] + " transfer Docs & Drive to service account successfully requested.")
+                            except Exception as Error:
+                                logging.error(user[1] + " error occured while transfer Docs & Drive to service account")
+                                logging.error(Error)
+                        else:
+                            try:
+                                service.users().delete(userKey=user[0]).execute()
+                                logging.info(user[1] + " successfully deleted & license release.")
+                            except Exception as Error:
+                                logging.error(user[1] + " error occured while trying to delete.")
+                                logging.error(Error)
+                else:
+                    pass
+                    
+            if operationStatus == "update":
+
+                updateUsersTemplates = CreateJsonTemplates(argument, \
+                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['dyn_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('updateUsers')
+                updateGroupsTemplates = CreateJsonTemplates(argument, \
+                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['dyn_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('addGroups')
+                ldapUsersTemplates = CreateJsonTemplates(argument, \
+                        listOfGroups, ADUConfigs['cond_groups'], ADUConfigs['dyn_groups'], ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('ldap')
+                service_ldap.update(ldapUsersTemplates)
+
+                for item in updateUsersTemplates:
+                    try:
+                        service.users().update(userKey=item[0], body=item[1]).execute()
+                        logging.info(item[0] + " " + "updated")
+                    except Exception as Error:
+                        logging.error(item[0] + " update error")
+                        logging.error(Error)
+                        
+                for template in updateGroupsTemplates:
+                    for item_group in template[0]:
+                        group_exist = False
+                        for group in listOfGroups:
+                            if group[1] == item_group:
                                 try:
-                                    service_transfer.transfers().insert(body=transfer_template).execute()
-                                    logging.info(user[1] + " transfer Docs & Drive to service account successfully requested.")
+                                    service.members().insert(groupKey=item_group, body=template[1]).execute()
+                                    logging.info(template[1]["email"] + " successfully added to group " + item_group)
                                 except Exception as Error:
-                                    logging.error(user[1] + " error occured while transfer Docs & Drive to service account")
                                     logging.error(Error)
+                                    logging.error(template[1]["email"] + " error while adding to group " + str(item_group))
+                                group_exist = True
+                                break
+                            else:
+                                continue
+        
+                        if group_exist == False and item_group is not None:
+                            group_body = {
+                                "name": "{0}".format(item_group.split('@')[0]),
+                                "email": "{0}".format(item_group)
+                                    }
+                            try:
+                                service.groups().insert(body=group_body).execute()
+                                logging.info("successfully create group " + item_group.split('@')[0])
+                            except Exception as Error:
+                                logging.error(Error)
+                                logging.error("error while creating group " + str(item_group.split('@')[0]))
                             else:
                                 try:
-                                    service.users().delete(userKey=user[0]).execute()
-                                    logging.info(user[1] + " successfully deleted & license release.")
+                                    service.members().insert(groupKey=item_group, body=template[1]).execute()
+                                    logging.info(template[1]["email"] + " successfully added to group " + item_group)
                                 except Exception as Error:
-                                    logging.error(user[1] + " error occured while trying to delete.")
                                     logging.error(Error)
-                    else:
-                        pass
-                        
-                if operationStatus == "update":
+                                    logging.error(template[1]["email"] + " error while adding to group " + str(item_group))
+                                
+                        else:
+                            pass
 
-                    updateUsersTemplates = CreateJsonTemplates(argument, \
-                            listOfGroups, ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('updateUsers')
-                    updateGroupsTemplates = CreateJsonTemplates(argument, \
-                            listOfGroups, ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('addGroups')
-                    ldapUsersTemplates = CreateJsonTemplates(argument, \
-                            listOfGroups, ADUConfigs['domen'], ADUConfigs['dc_ou']).get_data('ldap')
-                    service_ldap.update(ldapUsersTemplates)
-
-                    for item in updateUsersTemplates:
-                        try:
-                            service.users().update(userKey=item[0], body=item[1]).execute()
-                            logging.info(item[0] + " " + "updated")
-                        except Exception as Error:
-                            logging.error(item[0] + " update error")
-                            logging.error(Error)
-
-                    for item in updateGroupsTemplates:
-                        try:
-                            service.members().insert(groupKey=item[0], body=item[1]).execute()
-                            logging.info(item[1]["email"] + " successfully added to group " + item[0])
-                        except Exception as Error:
-                            logging.error(item[1]["email"] + " error while adding to group " + str(item[0]))
-                            logging.error(Error)
-
-                    remove(argument)
+                remove(argument)
