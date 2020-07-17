@@ -8,6 +8,7 @@ from json_templates_for_gsuite import CreateJsonTemplates
 from ADUService import create_directory_service
 from LDAPOperations import ADOperation
 from global_vars import ADUConfigs
+from varus_greetings import VarusGreetings
 
 if __name__ == '__main__':
     if not path.exists(path.join(getcwd(), 'Logs')):
